@@ -34,7 +34,7 @@ form.addEventListener("submit", async (e) => {
 
   btn.disabled = true;
 
-  const { error: updateErr } = await supabase.auth.updateUser({ password: p1 });
+  const { error: updateErr } = await sb.auth.updateUser({ password: p1 });
   if (updateErr) {
     msg.textContent = "비밀번호 변경에 실패했습니다: " + updateErr.message;
     msg.classList.add("msg--error");
@@ -42,7 +42,7 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  const { error: profileErr } = await supabase
+  const { error: profileErr } = await sb
     .from("profiles")
     .update({ must_change_password: false })
     .eq("id", session.user.id);
