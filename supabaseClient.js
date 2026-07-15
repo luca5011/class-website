@@ -1,3 +1,5 @@
+const SUPABASE_URL = "https://kvkouabicdmlltmwwvbe.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_t_buStx3pg78LqaCAGWFpw_Qb1iQhy6";
 const form = document.getElementById("loginForm");
 const msg = document.getElementById("msg");
 const btn = document.getElementById("loginBtn");
