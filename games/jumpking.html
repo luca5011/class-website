@@ -1,127 +1,4 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>점프킹</title>
-<link rel="stylesheet" href="../css/style.css">
-<style>
-  html, body { height: 100%; overscroll-behavior: none; }
-  body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: var(--board);
-    padding: 0;
-  }
-  .jk-wrap {
-    width: 100%;
-    max-width: 420px;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-  .jk-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    color: var(--chalk);
-  }
-  .jk-top a { color: var(--chalk); text-decoration: none; font-size: 13px; font-weight: 600; }
-  .jk-hud { display: flex; gap: 12px; font-size: 13px; }
-  .jk-hud b { color: #ffd76a; }
-  #jkCanvas {
-    display: block;
-    width: 100%;
-    aspect-ratio: 4 / 7;
-    background: #cfe8e0;
-    touch-action: none;
-    -webkit-touch-callout: none;
-  }
-  .jk-controls { padding: 10px 14px 18px; display: flex; flex-direction: column; gap: 8px; }
-  .jk-chargebar { height: 10px; background: rgba(245,244,239,.2); border-radius: 6px; overflow: hidden; }
-  .jk-chargefill { height: 100%; width: 0%; background: #ffd76a; }
-  .jk-btnrow { display: flex; gap: 10px; }
-  .jk-btn {
-    flex: 1;
-    padding: 22px 0;
-    font-size: 20px;
-    border: none;
-    border-radius: 10px;
-    background: var(--board-light);
-    color: var(--chalk);
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: none;
-  }
-  .jk-btn:active { background: #4c6c56; }
-  .jk-overlay {
-    position: fixed; inset: 0;
-    background: rgba(34,40,31,.72);
-    display: none; align-items: center; justify-content: center;
-    z-index: 10; padding: 20px;
-  }
-  .jk-overlay.show { display: flex; }
-  .jk-panel { background: #fff; border-radius: 12px; padding: 22px; max-width: 320px; width: 100%; text-align: center; }
-  .jk-panel h2 { margin: 0 0 8px; font-size: 20px; }
-  .jk-panel p { margin: 4px 0; font-size: 14px; color: #55604f; }
-  .jk-panel .btn { margin-top: 14px; }
-  .jk-lb-list { text-align: left; margin-top: 10px; max-height: 260px; overflow-y: auto; }
-  .jk-lb-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 4px; border-bottom: 1px solid var(--line); }
-  .jk-lb-row b { color: var(--board); }
-</style>
-</head>
-<body>
-  <div class="jk-wrap">
-    <div class="jk-top">
-      <a href="../minigames.html">← 목록</a>
-      <div class="jk-hud">
-        <span>LV <b id="hudLevel">1</b>/5</span>
-        <span>🪙 <b id="hudCoins">0</b></span>
-      </div>
-      <a href="#" id="btnRanking">🏆 랭킹</a>
-    </div>
-
-    <canvas id="jkCanvas"></canvas>
-
-    <div class="jk-controls">
-      <div class="jk-chargebar"><div class="jk-chargefill" id="chargeFill"></div></div>
-      <div class="jk-btnrow">
-        <button class="jk-btn" id="btnLeft">⬅ 점프</button>
-        <button class="jk-btn" id="btnRight">점프 ➡</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="jk-overlay" id="clearOverlay">
-    <div class="jk-panel">
-      <h2 id="clearTitle">레벨 클리어!</h2>
-      <p id="clearDesc"></p>
-      <button class="btn" id="clearNextBtn">다음 레벨</button>
-    </div>
-  </div>
-
-  <div class="jk-overlay" id="finishOverlay">
-    <div class="jk-panel">
-      <h2>🎉 게임 클리어!</h2>
-      <p id="finishDesc"></p>
-      <button class="btn" id="finishRestartBtn">처음부터 다시하기</button>
-    </div>
-  </div>
-
-  <div class="jk-overlay" id="lbOverlay">
-    <div class="jk-panel">
-      <h2>🏆 랭킹 TOP 10</h2>
-      <div class="jk-lb-list" id="lbList">불러오는 중...</div>
-      <button class="btn" id="lbCloseBtn">닫기</button>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="../js/supabaseClient.js"></script>
-  <script>
-    // ── 설정값 (난이도/물리 조절은 여기서) ─────────────────────
+// ── 설정값 (난이도/물리 조절은 여기서) ─────────────────────
     const CFG = {
       W: 400, H: 700,
       GRAVITY: 1600,
@@ -181,7 +58,7 @@
         {dx:-70,dy:55,w:65},{dx:75,dy:60,w:65},{dx:-70,dy:55,w:65},{dx:70,dy:60,w:65},
         {dx:0,dy:65,w:90}
       ], [
-        {after:0,dx:38,dy:32,w:34},{after:4,dx:-34,dy:30,w:34}
+        {after:0,dx:110,dy:35,w:32},{after:4,dx:-45,dy:32,w:34}
       ], [
         {after:1,dx:10,dy:40},{after:5,dx:0,dy:40},{after:7,dx:10,dy:40}
       ]),
@@ -192,7 +69,7 @@
         {dx:-70,dy:55,w:60,type:"move",moveAmp:35,moveSpeed:0.8},
         {dx:75,dy:60,w:60},{dx:0,dy:65,w:90}
       ], [
-        {after:2,dx:40,dy:34,w:32}
+        {after:1,dx:75,dy:30,w:34}
       ], [
         {after:1,dx:0,dy:45},{after:5,dx:10,dy:40},{after:8,dx:0,dy:35}
       ]),
@@ -204,7 +81,7 @@
         {dx:70,dy:60,w:55,type:"fade"},{dx:-70,dy:65,w:55},
         {dx:0,dy:65,w:90}
       ], [
-        {after:0,dx:40,dy:34,w:32},{after:4,dx:-38,dy:32,w:32}
+        {after:0,dx:110,dy:38,w:32},{after:4,dx:65,dy:30,w:32}
       ], [
         {after:2,dx:0,dy:40},{after:5,dx:0,dy:40},{after:7,dx:0,dy:35}
       ]),
@@ -216,7 +93,7 @@
         {dx:-75,dy:60,w:50,type:"move",moveAmp:50,moveSpeed:1.0},
         {dx:80,dy:65,w:55,type:"fade"},{dx:0,dy:70,w:90}
       ], [
-        {after:0,dx:42,dy:35,w:32},{after:3,dx:-40,dy:34,w:32},{after:6,dx:40,dy:34,w:32}
+        {after:0,dx:110,dy:38,w:32},{after:3,dx:-40,dy:34,w:32},{after:6,dx:70,dy:40,w:32}
       ], [
         {after:1,dx:0,dy:42},{after:4,dx:0,dy:42},{after:7,dx:0,dy:40}
       ]),
@@ -263,11 +140,14 @@
     }
 
     function respawn() {
-      player.x = lastCheckpoint.x + lastCheckpoint.w / 2;
-      player.y = lastCheckpoint.y - CFG.R;
+      // 낙사/가시 접촉 시 레벨 처음(시작 발판)부터 다시 시작
+      const s = level.platforms[0];
+      player.x = s.x + s.w / 2;
+      player.y = s.y - CFG.R;
       player.vx = 0; player.vy = 0;
       player.onGround = true;
-      player.standingOn = lastCheckpoint;
+      player.standingOn = s;
+      lastCheckpoint = s;
     }
 
     function startCharge(dir) {
@@ -567,6 +447,3 @@
       lastTime = performance.now();
       requestAnimationFrame(loop);
     })();
-  </script>
-</body>
-</html>
