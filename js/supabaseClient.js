@@ -1,4 +1,4 @@
-const SUPABASE_URL = "https://kvkouabicdmlltmwwvbe.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://kvkouabicdmlltmwwvbe.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_t_buStx3pg78LqaCAGWFpw_Qb1iQhy6";
 
 // 아이디만 발급하므로, 내부적으로 아이디@도메인 형태의 가짜 이메일을 만들어 Supabase Auth에 사용
