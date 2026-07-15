@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>미니게임</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body { display: block; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="page__top">
+      <a class="page__back" href="index.html">← 메인</a>
+      <h1 class="page__title">🎮 미니게임</h1>
+    </div>
+
+    <div class="game-grid" id="gameGrid"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    const GAMES = [
+      { id: "jumpking", name: "점프킹", desc: "클릭으로 충전, 놓으면 점프! 정상까지 올라가보자.", emoji: "🧗", href: "games/jumpking.html" },
+      // 앞으로 게임 추가할 때 여기에 한 줄씩 추가
+    ];
+
+    function renderGames() {
+      const grid = document.getElementById("gameGrid");
+      grid.innerHTML = GAMES.map(g => `
+        <a class="game-card" href="${g.href}">
+          <div class="game-card__thumb">${g.emoji}</div>
+          <div class="game-card__body">
+            <p class="game-card__name">${g.name}</p>
+            <p class="game-card__desc">${g.desc}</p>
+          </div>
+        </a>
+      `).join("");
+    }
+
+    (async () => {
+      if (typeof sb === "undefined") {
+        location.replace("login.html");
+        return;
+      }
+      const { data } = await sb.auth.getSession();
+      if (!data.session) {
+        location.replace("login.html");
+        return;
+      }
+      try {
+        const profile = await getMyProfile(data.session.user.id);
+        if (profile.must_change_password) {
+          location.replace("change-password.html");
+          return;
+        }
+      } catch (e) {
+        location.replace("login.html");
+        return;
+      }
+      renderGames();
+    })();
+  </script>
+</body>
+</html>
