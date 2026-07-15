@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>메인</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="card">
+    <div class="card__band">
+      <p class="card__eyebrow">CLASS WEBSITE</p>
+      <h1 class="card__title">로그인 완료</h1>
+    </div>
+    <div class="card__body">
+      <p class="msg msg--info" id="who"></p>
+      <a class="btn" href="minigames.html" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">🎮 미니게임</a>
+      <button class="btn" id="logoutBtn">로그아웃</button>
+      <p class="hint">상단바(수행평가 / 시간표·급식 / 건의함 / 자유게시판 / 관리자) 및 메인 화면은 다음 단계에서 제작 예정입니다.</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    (async () => {
+      if (typeof sb === "undefined") {
+        location.replace("login.html");
+        return;
+      }
+
+      const { data } = await sb.auth.getSession();
+
+      if (!data.session) {
+        location.replace("login.html");
+        return;
+      }
+
+      let profile;
+      try {
+        profile = await getMyProfile(data.session.user.id);
+      } catch (e) {
+        location.replace("login.html");
+        return;
+      }
+
+      if (profile.must_change_password) {
+        location.replace("change-password.html");
+        return;
+      }
+
+      document.getElementById("who").textContent =
+        `${profile.username}${profile.is_admin ? " (관리자)" : ""} 님, 환영합니다.`;
+    })();
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await sb.auth.signOut();
+      location.href = "login.html";
+    });
+  </script>
+</body>
+</html>
