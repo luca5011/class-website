@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>보드게임 대여</title>
+<link rel="stylesheet" href="css/style.css">
+<style>body{display:block;}</style>
+</head>
+<body>
+  <nav class="navbar">
+    <a class="navbar__brand" href="index.html">CLASS WEBSITE</a>
+    <div class="navbar__menu">
+      <a class="navbar__link" href="suggestions.html">건의함</a>
+      <a class="navbar__link" href="assessment.html">수행평가</a>
+      <a class="navbar__link" href="boardgames.html">보드게임 대여</a>
+    </div>
+    <a class="navbar__logout" href="#" id="logoutBtn">로그아웃</a>
+  </nav>
+
+  <div class="hub">
+    <h1 class="hub__title">보드게임 대여</h1>
+    <div class="tt-card">
+      <div class="tt-card__body">
+        <p class="tt-empty">이 페이지는 다음 단계에서 제작 예정입니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await sb.auth.signOut();
+      location.href = "login.html";
+    });
+    (async () => {
+      if (typeof sb === "undefined") { location.replace("login.html"); return; }
+      const { data } = await sb.auth.getSession();
+      if (!data.session) { location.replace("login.html"); return; }
+    })();
+  </script>
+</body>
+</html>
