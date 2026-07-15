@@ -5,37 +5,109 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>메인</title>
 <link rel="stylesheet" href="css/style.css">
+<style>body{display:block;}</style>
 </head>
 <body>
-  <div class="card">
-    <div class="card__band">
-      <p class="card__eyebrow">CLASS WEBSITE</p>
-      <h1 class="card__title">로그인 완료</h1>
+  <nav class="navbar">
+    <a class="navbar__brand" href="index.html">CLASS WEBSITE</a>
+    <div class="navbar__menu">
+      <a class="navbar__link" href="suggestions.html">건의함</a>
+      <a class="navbar__link" href="assessment.html">수행평가</a>
+      <a class="navbar__link" href="boardgames.html">보드게임 대여</a>
     </div>
-    <div class="card__body">
-      <p class="msg msg--info" id="who"></p>
-      <a class="btn" href="minigames.html" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">🎮 미니게임</a>
-      <button class="btn" id="logoutBtn">로그아웃</button>
-      <p class="hint">상단바(수행평가 / 시간표·급식 / 건의함 / 자유게시판 / 관리자) 및 메인 화면은 다음 단계에서 제작 예정입니다.</p>
+    <a class="navbar__logout" href="#" id="logoutBtn">로그아웃</a>
+  </nav>
+
+  <div class="hub">
+    <p class="hub__hello" id="hello"></p>
+    <h1 class="hub__title">1-3 시간표</h1>
+
+    <div class="tt-card">
+      <div class="tt-card__head">
+        <h2>이번 주 시간표</h2>
+        <button class="tt-upload-btn" id="ttUploadBtn" style="display:none;">이미지 변경</button>
+        <input type="file" id="ttFileInput" accept="image/*" style="display:none;">
+      </div>
+      <div class="tt-card__body">
+        <img id="ttImg" style="display:none;" alt="시간표">
+        <p class="tt-empty" id="ttEmpty">아직 등록된 시간표가 없습니다.</p>
+      </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/supabaseClient.js"></script>
   <script>
+    const TT_BUCKET = "timetable";
+    const TT_PATH = "current.img";
+
+    const ttImg = document.getElementById("ttImg");
+    const ttEmpty = document.getElementById("ttEmpty");
+    const ttUploadBtn = document.getElementById("ttUploadBtn");
+    const ttFileInput = document.getElementById("ttFileInput");
+
+    async function loadTimetableImage() {
+      const { data: listData } = await sb.storage.from(TT_BUCKET).list("");
+      const meta = listData && listData.find(f => f.name === TT_PATH);
+      if (!meta) {
+        ttImg.style.display = "none";
+        ttEmpty.style.display = "block";
+        return;
+      }
+      const { data: urlData } = sb.storage.from(TT_BUCKET).getPublicUrl(TT_PATH);
+      ttImg.src = urlData.publicUrl + "?v=" + new Date(meta.updated_at).getTime();
+      ttImg.style.display = "block";
+      ttEmpty.style.display = "none";
+    }
+
+    async function uploadTimetable(file) {
+      const { error } = await sb.storage.from(TT_BUCKET).upload(TT_PATH, file, { upsert: true });
+      if (error) {
+        alert("업로드에 실패했습니다: " + error.message);
+        return;
+      }
+      await loadTimetableImage();
+    }
+
+    ttUploadBtn.addEventListener("click", () => ttFileInput.click());
+    ttFileInput.addEventListener("change", () => {
+      const file = ttFileInput.files[0];
+      if (file) uploadTimetable(file);
+      ttFileInput.value = "";
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await sb.auth.signOut();
+      location.href = "login.html";
+    });
+
+    // ── 히든 메뉴 (Q + W + Shift 동시 입력 → 암호 입력 → 미니게임) ──
+    let qKey = false, wKey = false, promptOpen = false;
+    window.addEventListener("keydown", (e) => {
+      const k = e.key.toLowerCase();
+      if (k === "q") qKey = true;
+      if (k === "w") wKey = true;
+      if (qKey && wKey && e.shiftKey && !promptOpen) {
+        promptOpen = true;
+        const answer = window.prompt("🔒 히든 메뉴\n암호를 입력하세요");
+        if (answer && answer.trim() === "이산화망가니즈") {
+          location.href = "minigames.html";
+        }
+        promptOpen = false;
+      }
+    });
+    window.addEventListener("keyup", (e) => {
+      const k = e.key.toLowerCase();
+      if (k === "q") qKey = false;
+      if (k === "w") wKey = false;
+    });
+
+    // ── 로그인 확인 ────────────────────────────────
     (async () => {
-      if (typeof sb === "undefined") {
-        location.replace("login.html");
-        return;
-      }
-
+      if (typeof sb === "undefined") { location.replace("login.html"); return; }
       const { data } = await sb.auth.getSession();
-
-      if (!data.session) {
-        location.replace("login.html");
-        return;
-      }
-
+      if (!data.session) { location.replace("login.html"); return; }
       let profile;
       try {
         profile = await getMyProfile(data.session.user.id);
@@ -43,20 +115,15 @@
         location.replace("login.html");
         return;
       }
+      if (profile.must_change_password) { location.replace("change-password.html"); return; }
 
-      if (profile.must_change_password) {
-        location.replace("change-password.html");
-        return;
-      }
+      document.getElementById("hello").textContent =
+        `${profile.username}${profile.is_admin ? " (관리자)" : ""}님, 안녕하세요`;
 
-      document.getElementById("who").textContent =
-        `${profile.username}${profile.is_admin ? " (관리자)" : ""} 님, 환영합니다.`;
+      if (profile.is_admin) ttUploadBtn.style.display = "inline-block";
+
+      await loadTimetableImage();
     })();
-
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await sb.auth.signOut();
-      location.href = "login.html";
-    });
   </script>
 </body>
 </html>
