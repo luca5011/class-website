@@ -349,3 +349,56 @@ body {
   text-align: center;
   padding: 30px 0;
 }
+.hidden-prompt {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 50;
+  background: var(--board);
+  color: var(--chalk);
+  padding: 10px 16px;
+  display: flex;
+  justify-content: center;
+  transform: translateY(-100%);
+  transition: transform .2s ease;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+}
+.hidden-prompt.show { transform: translateY(0); }
+
+.hidden-prompt form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 420px;
+  width: 100%;
+}
+
+.hidden-prompt__q { font-size: 13px; white-space: nowrap; }
+
+.hidden-prompt input {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.hidden-prompt button[type="submit"] {
+  background: #ffd76a;
+  color: #2f4538;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.hidden-prompt button#hiddenPromptClose {
+  background: transparent;
+  border: none;
+  color: var(--chalk);
+  font-size: 14px;
+  cursor: pointer;
+  opacity: .7;
+}
