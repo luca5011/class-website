@@ -181,7 +181,7 @@
         {dx:-70,dy:55,w:65},{dx:75,dy:60,w:65},{dx:-70,dy:55,w:65},{dx:70,dy:60,w:65},
         {dx:0,dy:65,w:90}
       ], [
-        {after:0,dx:38,dy:32,w:34},{after:4,dx:-34,dy:30,w:34}
+        {after:0,dx:110,dy:35,w:32},{after:4,dx:-45,dy:32,w:34}
       ], [
         {after:1,dx:10,dy:40},{after:5,dx:0,dy:40},{after:7,dx:10,dy:40}
       ]),
@@ -192,7 +192,7 @@
         {dx:-70,dy:55,w:60,type:"move",moveAmp:35,moveSpeed:0.8},
         {dx:75,dy:60,w:60},{dx:0,dy:65,w:90}
       ], [
-        {after:2,dx:40,dy:34,w:32}
+        {after:1,dx:75,dy:30,w:34}
       ], [
         {after:1,dx:0,dy:45},{after:5,dx:10,dy:40},{after:8,dx:0,dy:35}
       ]),
@@ -204,7 +204,7 @@
         {dx:70,dy:60,w:55,type:"fade"},{dx:-70,dy:65,w:55},
         {dx:0,dy:65,w:90}
       ], [
-        {after:0,dx:40,dy:34,w:32},{after:4,dx:-38,dy:32,w:32}
+        {after:0,dx:110,dy:38,w:32},{after:4,dx:65,dy:30,w:32}
       ], [
         {after:2,dx:0,dy:40},{after:5,dx:0,dy:40},{after:7,dx:0,dy:35}
       ]),
@@ -216,7 +216,7 @@
         {dx:-75,dy:60,w:50,type:"move",moveAmp:50,moveSpeed:1.0},
         {dx:80,dy:65,w:55,type:"fade"},{dx:0,dy:70,w:90}
       ], [
-        {after:0,dx:42,dy:35,w:32},{after:3,dx:-40,dy:34,w:32},{after:6,dx:40,dy:34,w:32}
+        {after:0,dx:110,dy:38,w:32},{after:3,dx:-40,dy:34,w:32},{after:6,dx:70,dy:40,w:32}
       ], [
         {after:1,dx:0,dy:42},{after:4,dx:0,dy:42},{after:7,dx:0,dy:40}
       ]),
@@ -263,11 +263,14 @@
     }
 
     function respawn() {
-      player.x = lastCheckpoint.x + lastCheckpoint.w / 2;
-      player.y = lastCheckpoint.y - CFG.R;
+      // 낙사/가시 접촉 시 레벨 처음(시작 발판)부터 다시 시작
+      const s = level.platforms[0];
+      player.x = s.x + s.w / 2;
+      player.y = s.y - CFG.R;
       player.vx = 0; player.vy = 0;
       player.onGround = true;
-      player.standingOn = lastCheckpoint;
+      player.standingOn = s;
+      lastCheckpoint = s;
     }
 
     function startCharge(dir) {
