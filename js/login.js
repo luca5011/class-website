@@ -11,7 +11,7 @@ form.addEventListener("submit", async (e) => {
   const username = document.getElementById("username").value;
   const password = document.getElementById("password").value;
 
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await sb.auth.signInWithPassword({
     email: usernameToEmail(username),
     password,
   });
@@ -33,7 +33,7 @@ form.addEventListener("submit", async (e) => {
 });
 
 (async () => {
-  const { data } = await supabase.auth.getSession();
+  const { data } = await sb.auth.getSession();
   if (data.session) {
     const profile = await getMyProfile(data.session.user.id);
     location.href = profile.must_change_password ? "change-password.html" : "index.html";
