@@ -14,7 +14,9 @@
       <a class="navbar__link" href="suggestions.html">건의함</a>
       <a class="navbar__link" href="assessment.html">수행평가</a>
       <a class="navbar__link" href="boardgames.html">보드게임 대여</a>
+      <a class="navbar__link" href="users.html" id="navUsersLink" style="display:none;">유저관리</a>
     </div>
+    <a class="navbar__profile" href="profile.html" id="navProfile">👤 <span id="navUsername"></span></a>
     <a class="navbar__logout" href="#" id="logoutBtn">로그아웃</a>
   </nav>
 
@@ -29,6 +31,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/supabaseClient.js"></script>
+  <script src="js/site.js"></script>
+  <script src="js/hiddenMenus.js"></script>
   <script>
     document.getElementById("logoutBtn").addEventListener("click", async (e) => {
       e.preventDefault();
@@ -39,6 +43,17 @@
       if (typeof sb === "undefined") { location.replace("login.html"); return; }
       const { data } = await sb.auth.getSession();
       if (!data.session) { location.replace("login.html"); return; }
+      let profile;
+      try {
+        profile = await getMyProfile(data.session.user.id);
+      } catch (e) {
+        location.replace("login.html");
+        return;
+      }
+      if (profile.must_change_password) { location.replace("change-password.html"); return; }
+      window.currentUser = { id: data.session.user.id, username: profile.username };
+      initSiteChrome(profile);
+      if (window.initHiddenMenus) await window.initHiddenMenus();
     })();
   </script>
 </body>
