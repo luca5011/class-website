@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>프로필</title>
+<link rel="stylesheet" href="css/style.css">
+<style>body{display:block;}</style>
+</head>
+<body>
+  <nav class="navbar">
+    <a class="navbar__brand" href="index.html">CLASS WEBSITE</a>
+    <div class="navbar__menu">
+      <a class="navbar__link" href="suggestions.html">건의함</a>
+      <a class="navbar__link" href="assessment.html">수행평가</a>
+      <a class="navbar__link" href="boardgames.html">보드게임 대여</a>
+      <a class="navbar__link" href="users.html" id="navUsersLink" style="display:none;">유저관리</a>
+    </div>
+    <a class="navbar__profile" href="profile.html" id="navProfile">👤 <span id="navUsername"></span></a>
+    <a class="navbar__logout" href="#" id="logoutBtn">로그아웃</a>
+  </nav>
+
+  <div class="hub">
+    <h1 class="hub__title">프로필</h1>
+
+    <div class="tt-card" id="profileCard" style="display:none;">
+      <div class="profile-head">
+        <div class="profile-avatar" id="avatarWrap">
+          <img id="avatarImg" style="display:none;" alt="프로필 사진">
+          <span id="avatarFallback"></span>
+        </div>
+        <div class="profile-info">
+          <p class="profile-name" id="profileName"></p>
+          <p class="profile-badge" id="profileBadge" style="display:none;">관리자</p>
+        </div>
+      </div>
+      <div class="profile-actions" id="profileActions" style="display:none;">
+        <button class="tt-upload-btn" id="avatarUploadBtn">프로필 사진 변경</button>
+        <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
+      </div>
+    </div>
+
+    <div class="tt-card" id="notFoundCard" style="display:none;">
+      <div class="tt-card__body">
+        <p class="tt-empty">해당 유저를 찾을 수 없습니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/site.js"></script>
+  <script src="js/hiddenMenus.js"></script>
+  <script>
+    const AVATAR_BUCKET = "avatars";
+    const AVATAR_PATH = "current.img";
+
+    const profileCard = document.getElementById("profileCard");
+    const notFoundCard = document.getElementById("notFoundCard");
+    const avatarImg = document.getElementById("avatarImg");
+    const avatarFallback = document.getElementById("avatarFallback");
+    const profileName = document.getElementById("profileName");
+    const profileBadge = document.getElementById("profileBadge");
+    const profileActions = document.getElementById("profileActions");
+    const avatarUploadBtn = document.getElementById("avatarUploadBtn");
+    const avatarFileInput = document.getElementById("avatarFileInput");
+
+    async function loadAvatar(userId) {
+      const { data: listData } = await sb.storage.from(AVATAR_BUCKET).list(userId);
+      const meta = listData && listData.find(f => f.name === AVATAR_PATH);
+      if (!meta) {
+        avatarImg.style.display = "none";
+        avatarFallback.style.display = "flex";
+        return;
+      }
+      const { data: urlData } = sb.storage.from(AVATAR_BUCKET).getPublicUrl(`${userId}/${AVATAR_PATH}`);
+      avatarImg.src = urlData.publicUrl + "?v=" + new Date(meta.updated_at).getTime();
+      avatarImg.style.display = "block";
+      avatarFallback.style.display = "none";
+    }
+
+    async function uploadAvatar(userId, file) {
+      const { error } = await sb.storage.from(AVATAR_BUCKET).upload(`${userId}/${AVATAR_PATH}`, file, { upsert: true });
+      if (error) {
+        alert("업로드에 실패했습니다: " + error.message);
+        return;
+      }
+      await loadAvatar(userId);
+    }
+
+    avatarUploadBtn.addEventListener("click", () => avatarFileInput.click());
+
+    document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await sb.auth.signOut();
+      location.href = "login.html";
+    });
+
+    (async () => {
+      if (typeof sb === "undefined") { location.replace("login.html"); return; }
+      const { data } = await sb.auth.getSession();
+      if (!data.session) { location.replace("login.html"); return; }
+
+      let myProfile;
+      try {
+        myProfile = await getMyProfile(data.session.user.id);
+      } catch (e) {
+        location.replace("login.html");
+        return;
+      }
+      if (myProfile.must_change_password) { location.replace("change-password.html"); return; }
+
+      window.currentUser = { id: data.session.user.id, username: myProfile.username };
+      initSiteChrome(myProfile);
+      if (window.initHiddenMenus) await window.initHiddenMenus();
+
+      const params = new URLSearchParams(location.search);
+      const targetUsername = params.get("user") || myProfile.username;
+
+      const { data: targetProfile, error } = await sb
+        .from("profiles")
+        .select("*")
+        .eq("username", targetUsername)
+        .single();
+
+      if (error || !targetProfile) {
+        notFoundCard.style.display = "block";
+        return;
+      }
+
+      profileCard.style.display = "block";
+      profileName.textContent = targetProfile.username;
+      profileBadge.style.display = targetProfile.is_admin ? "inline-block" : "none";
+      avatarFallback.textContent = targetProfile.username.charAt(0).toUpperCase();
+
+      await loadAvatar(targetProfile.id);
+
+      if (targetProfile.id === myProfile.id) {
+        profileActions.style.display = "block";
+        avatarFileInput.addEventListener("change", () => {
+          const file = avatarFileInput.files[0];
+          if (file) uploadAvatar(targetProfile.id, file);
+          avatarFileInput.value = "";
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

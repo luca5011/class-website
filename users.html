@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>유저 관리</title>
+<link rel="stylesheet" href="css/style.css">
+<style>body{display:block;}</style>
+</head>
+<body>
+  <nav class="navbar">
+    <a class="navbar__brand" href="index.html">CLASS WEBSITE</a>
+    <div class="navbar__menu">
+      <a class="navbar__link" href="suggestions.html">건의함</a>
+      <a class="navbar__link" href="assessment.html">수행평가</a>
+      <a class="navbar__link" href="boardgames.html">보드게임 대여</a>
+      <a class="navbar__link" href="users.html" id="navUsersLink" style="display:none;">유저관리</a>
+    </div>
+    <a class="navbar__profile" href="profile.html" id="navProfile">👤 <span id="navUsername"></span></a>
+    <a class="navbar__logout" href="#" id="logoutBtn">로그아웃</a>
+  </nav>
+
+  <div class="hub" style="max-width:720px;">
+    <h1 class="hub__title">유저 관리</h1>
+    <div id="userList">불러오는 중...</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/site.js"></script>
+  <script src="js/hiddenMenus.js"></script>
+  <script>
+    const AVATAR_BUCKET = "avatars";
+    const AVATAR_PATH = "current.img";
+
+    document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await sb.auth.signOut();
+      location.href = "login.html";
+    });
+
+    async function toggleHidden(userId, current) {
+      const { error } = await sb.from("profiles").update({ is_hidden: !current }).eq("id", userId);
+      if (error) { alert("실패: " + error.message); return; }
+      renderUsers();
+    }
+
+    async function resetAvatar(userId) {
+      if (!confirm("이 유저의 프로필 사진을 기본 이미지로 초기화할까요?")) return;
+      const { error } = await sb.storage.from(AVATAR_BUCKET).remove([`${userId}/${AVATAR_PATH}`]);
+      if (error) { alert("실패: " + error.message); return; }
+      alert("초기화되었습니다.");
+    }
+
+    window.toggleHidden = toggleHidden;
+    window.resetAvatar = resetAvatar;
+
+    async function renderUsers() {
+      const listEl = document.getElementById("userList");
+
+      const { data: profiles, error } = await sb
+        .from("profiles")
+        .select("*")
+        .order("username");
+
+      if (error) {
+        listEl.innerHTML = `<p class="tt-empty">유저 목록을 불러오지 못했습니다.</p>`;
+        return;
+      }
+
+      const { data: unlocks } = await sb.from("unlocked_menus").select("user_id, menu_key");
+      const unlockMap = {};
+      (unlocks || []).forEach(u => {
+        (unlockMap[u.user_id] = unlockMap[u.user_id] || []).push(u.menu_key);
+      });
+
+      listEl.innerHTML = profiles.map(p => `
+        <div class="user-row">
+          <div class="user-row__main">
+            <span class="user-row__name">${p.username}${p.is_admin ? " 👑" : ""}${p.is_hidden ? " (숨김)" : ""}</span>
+            <span class="user-row__unlocks">해금: ${(unlockMap[p.id] || []).join(", ") || "-"}</span>
+          </div>
+          <div class="user-row__actions">
+            <button class="tt-upload-btn" onclick="toggleHidden('${p.id}', ${p.is_hidden})">${p.is_hidden ? "숨김 해제" : "숨기기"}</button>
+            <button class="tt-upload-btn" onclick="resetAvatar('${p.id}')">사진 초기화</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    (async () => {
+      if (typeof sb === "undefined") { location.replace("login.html"); return; }
+      const { data } = await sb.auth.getSession();
+      if (!data.session) { location.replace("login.html"); return; }
+      let profile;
+      try {
+        profile = await getMyProfile(data.session.user.id);
+      } catch (e) {
+        location.replace("login.html");
+        return;
+      }
+      if (profile.must_change_password) { location.replace("change-password.html"); return; }
+      if (!profile.is_admin) { location.replace("index.html"); return; }
+
+      window.currentUser = { id: data.session.user.id, username: profile.username };
+      initSiteChrome(profile);
+      if (window.initHiddenMenus) await window.initHiddenMenus();
+
+      renderUsers();
+    })();
+  </script>
+</body>
+</html>
