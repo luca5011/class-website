@@ -8,28 +8,19 @@
 <style>body{display:block;}</style>
 </head>
 <body>
-  
-  <div class="hidden-prompt" id="hiddenPrompt">
-    <form id="hiddenPromptForm">
-      <span class="hidden-prompt__q">🔒 암호를 입력하세요</span>
-      <input type="text" id="hiddenPromptInput" autocomplete="off">
-      <button type="submit">확인</button>
-      <button type="button" id="hiddenPromptClose">✕</button>
-    </form>
-  </div>
-  
   <nav class="navbar">
     <a class="navbar__brand" href="index.html">CLASS WEBSITE</a>
     <div class="navbar__menu">
       <a class="navbar__link" href="suggestions.html">건의함</a>
       <a class="navbar__link" href="assessment.html">수행평가</a>
       <a class="navbar__link" href="boardgames.html">보드게임 대여</a>
+      <a class="navbar__link" href="users.html" id="navUsersLink" style="display:none;">유저관리</a>
     </div>
+    <a class="navbar__profile" href="profile.html" id="navProfile">👤 <span id="navUsername"></span></a>
     <a class="navbar__logout" href="#" id="logoutBtn">로그아웃</a>
   </nav>
 
   <div class="hub">
-    <p class="hub__hello" id="hello"></p>
     <h1 class="hub__title">1-3 시간표</h1>
 
     <div class="tt-card">
@@ -47,6 +38,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/supabaseClient.js"></script>
+  <script src="js/site.js"></script>
+  <script src="js/hiddenMenus.js"></script>
   <script>
     const TT_BUCKET = "timetable";
     const TT_PATH = "current.img";
@@ -92,50 +85,6 @@
       location.href = "login.html";
     });
 
-    // ── 히든 메뉴 (Q + W + Shift 동시 입력 → 상단 질문창 → 이산화망가니즈 입력 시 미니게임) ──
-    const hiddenPrompt = document.getElementById("hiddenPrompt");
-    const hiddenPromptForm = document.getElementById("hiddenPromptForm");
-    const hiddenPromptInput = document.getElementById("hiddenPromptInput");
-    const hiddenPromptClose = document.getElementById("hiddenPromptClose");
-
-    function openHiddenPrompt() {
-      if (hiddenPrompt.classList.contains("show")) return;
-      hiddenPrompt.classList.add("show");
-      hiddenPromptInput.value = "";
-      setTimeout(() => hiddenPromptInput.focus(), 50);
-    }
-    function closeHiddenPrompt() {
-      hiddenPrompt.classList.remove("show");
-    }
-
-    let qKey = false, wKey = false;
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && hiddenPrompt.classList.contains("show")) {
-        closeHiddenPrompt();
-        return;
-      }
-      const k = e.key.toLowerCase();
-      if (k === "q") qKey = true;
-      if (k === "w") wKey = true;
-      if (qKey && wKey && e.shiftKey) openHiddenPrompt();
-    });
-    window.addEventListener("keyup", (e) => {
-      const k = e.key.toLowerCase();
-      if (k === "q") qKey = false;
-      if (k === "w") wKey = false;
-    });
-
-    hiddenPromptForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const answer = hiddenPromptInput.value.trim();
-      if (answer === "이산화망가니즈") {
-        location.href = "minigames.html";
-      } else {
-        closeHiddenPrompt();
-      }
-    });
-    hiddenPromptClose.addEventListener("click", closeHiddenPrompt);
-
     // ── 로그인 확인 ────────────────────────────────
     (async () => {
       if (typeof sb === "undefined") { location.replace("login.html"); return; }
@@ -150,8 +99,9 @@
       }
       if (profile.must_change_password) { location.replace("change-password.html"); return; }
 
-      document.getElementById("hello").textContent =
-        `${profile.username}${profile.is_admin ? " (관리자)" : ""}님, 안녕하세요`;
+      window.currentUser = { id: data.session.user.id, username: profile.username };
+      initSiteChrome(profile);
+      if (window.initHiddenMenus) await window.initHiddenMenus();
 
       if (profile.is_admin) ttUploadBtn.style.display = "inline-block";
 
