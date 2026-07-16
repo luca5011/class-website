@@ -15,6 +15,7 @@
       <a class="navbar__link" href="assessment.html">수행평가</a>
       <a class="navbar__link" href="boardgames.html">보드게임 대여</a>
       <a class="navbar__link" href="users.html" id="navUsersLink" style="display:none;">유저관리</a>
+      <a class="navbar__link" href="admin.html" id="navAdminLink" style="display:none;">관리자</a>
     </div>
     <a class="navbar__profile" href="profile.html" id="navProfile">👤 <span id="navUsername"></span></a>
     <a class="navbar__logout" href="#" id="logoutBtn">로그아웃</a>
@@ -22,11 +23,20 @@
 
   <div class="hub">
     <h1 class="hub__title">건의함</h1>
+
     <div class="tt-card">
-      <div class="tt-card__body">
-        <p class="tt-empty">이 페이지는 다음 단계에서 제작 예정입니다.</p>
+      <div class="tt-card__head"><h2>건의 작성</h2></div>
+      <div class="tt-card__body" style="display:block;">
+        <form id="suggestForm" class="suggest-form">
+          <textarea id="suggestContent" placeholder="건의할 내용을 자유롭게 작성해 주세요" required></textarea>
+          <button class="btn" type="submit" style="margin-top:10px;">제출하기</button>
+          <p class="msg" id="suggestMsg"></p>
+        </form>
       </div>
     </div>
+
+    <h2 class="hub__title" style="font-size:16px; margin-top:24px;">내가 보낸 건의</h2>
+    <div id="mySuggestions">불러오는 중...</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -34,11 +44,71 @@
   <script src="js/site.js"></script>
   <script src="js/hiddenMenus.js"></script>
   <script>
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function loadMySuggestions() {
+      const el = document.getElementById("mySuggestions");
+      const { data, error } = await sb
+        .from("suggestions")
+        .select("*")
+        .eq("user_id", window.currentUser.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        el.innerHTML = `<p class="tt-empty">불러오지 못했습니다.</p>`;
+        return;
+      }
+      if (!data.length) {
+        el.innerHTML = `<p class="tt-empty">아직 보낸 건의가 없습니다.</p>`;
+        return;
+      }
+      el.innerHTML = data.map(s => `
+        <div class="suggest-card">
+          <div class="suggest-card__top">
+            <span class="suggest-status ${s.admin_reply ? "suggest-status--done" : "suggest-status--wait"}">${s.admin_reply ? "답변완료" : "대기중"}</span>
+            <span class="suggest-date">${new Date(s.created_at).toLocaleDateString()}</span>
+          </div>
+          <p class="suggest-content">${escapeHtml(s.content)}</p>
+          ${s.admin_reply ? `<div class="suggest-reply"><b>관리자 답변</b><p>${escapeHtml(s.admin_reply)}</p></div>` : ""}
+        </div>
+      `).join("");
+    }
+
+    document.getElementById("suggestForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("suggestMsg");
+      msg.textContent = "";
+      msg.className = "msg";
+      const content = document.getElementById("suggestContent").value.trim();
+      if (!content) return;
+
+      const { error } = await sb.from("suggestions").insert({
+        user_id: window.currentUser.id,
+        username: window.currentUser.username,
+        content,
+      });
+
+      if (error) {
+        msg.textContent = "제출에 실패했습니다: " + error.message;
+        msg.classList.add("msg--error");
+        return;
+      }
+      document.getElementById("suggestContent").value = "";
+      msg.textContent = "제출되었습니다.";
+      msg.classList.add("msg--info");
+      loadMySuggestions();
+    });
+
     document.getElementById("logoutBtn").addEventListener("click", async (e) => {
       e.preventDefault();
       await sb.auth.signOut();
       location.href = "login.html";
     });
+
     (async () => {
       if (typeof sb === "undefined") { location.replace("login.html"); return; }
       const { data } = await sb.auth.getSession();
@@ -54,6 +124,8 @@
       window.currentUser = { id: data.session.user.id, username: profile.username };
       initSiteChrome(profile);
       if (window.initHiddenMenus) await window.initHiddenMenus();
+
+      loadMySuggestions();
     })();
   </script>
 </body>
