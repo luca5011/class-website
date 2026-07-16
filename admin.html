@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 페이지</title>
+<link rel="stylesheet" href="css/style.css">
+<style>body{display:block;}</style>
+</head>
+<body>
+  <nav class="navbar">
+    <a class="navbar__brand" href="index.html">CLASS WEBSITE</a>
+    <div class="navbar__menu">
+      <a class="navbar__link" href="suggestions.html">건의함</a>
+      <a class="navbar__link" href="assessment.html">수행평가</a>
+      <a class="navbar__link" href="boardgames.html">보드게임 대여</a>
+      <a class="navbar__link" href="users.html" id="navUsersLink" style="display:none;">유저관리</a>
+      <a class="navbar__link" href="admin.html" id="navAdminLink" style="display:none;">관리자</a>
+    </div>
+    <a class="navbar__profile" href="profile.html" id="navProfile">👤 <span id="navUsername"></span></a>
+    <a class="navbar__logout" href="#" id="logoutBtn">로그아웃</a>
+  </nav>
+
+  <div class="hub" style="max-width:720px;">
+    <h1 class="hub__title">관리자 페이지</h1>
+
+    <h2 class="hub__title" style="font-size:16px;">보드게임 대여 내역</h2>
+    <div class="tt-card">
+      <div class="tt-card__body">
+        <p class="tt-empty">아직 대여 시스템이 없습니다. 다음 단계에서 제작 예정입니다.</p>
+      </div>
+    </div>
+
+    <h2 class="hub__title" style="font-size:16px; margin-top:26px;">건의함</h2>
+    <div id="adminSuggestions">불러오는 중...</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/site.js"></script>
+  <script src="js/hiddenMenus.js"></script>
+  <script>
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function loadAllSuggestions() {
+      const el = document.getElementById("adminSuggestions");
+      const { data, error } = await sb
+        .from("suggestions")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        el.innerHTML = `<p class="tt-empty">불러오지 못했습니다.</p>`;
+        return;
+      }
+      if (!data.length) {
+        el.innerHTML = `<p class="tt-empty">아직 접수된 건의가 없습니다.</p>`;
+        return;
+      }
+      el.innerHTML = data.map(s => `
+        <div class="suggest-card">
+          <div class="suggest-card__top">
+            <span class="suggest-status ${s.admin_reply ? "suggest-status--done" : "suggest-status--wait"}">${s.admin_reply ? "답변완료" : "대기중"}</span>
+            <span class="suggest-date">${escapeHtml(s.username)} · ${new Date(s.created_at).toLocaleDateString()}</span>
+          </div>
+          <p class="suggest-content">${escapeHtml(s.content)}</p>
+          <textarea class="suggest-reply-input" id="reply-${s.id}" placeholder="답변 작성...">${s.admin_reply ? escapeHtml(s.admin_reply) : ""}</textarea>
+          <button class="tt-upload-btn" onclick="submitReply(${s.id})">답변 등록</button>
+        </div>
+      `).join("");
+    }
+
+    async function submitReply(id) {
+      const input = document.getElementById(`reply-${id}`);
+      const replyText = input.value.trim();
+      if (!replyText) { alert("답변 내용을 입력해주세요."); return; }
+      const { error } = await sb.from("suggestions").update({
+        admin_reply: replyText,
+        replied_at: new Date().toISOString(),
+      }).eq("id", id);
+      if (error) { alert("실패: " + error.message); return; }
+      loadAllSuggestions();
+    }
+    window.submitReply = submitReply;
+
+    document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await sb.auth.signOut();
+      location.href = "login.html";
+    });
+
+    (async () => {
+      if (typeof sb === "undefined") { location.replace("login.html"); return; }
+      const { data } = await sb.auth.getSession();
+      if (!data.session) { location.replace("login.html"); return; }
+      let profile;
+      try {
+        profile = await getMyProfile(data.session.user.id);
+      } catch (e) {
+        location.replace("login.html");
+        return;
+      }
+      if (profile.must_change_password) { location.replace("change-password.html"); return; }
+      if (!profile.is_admin) { location.replace("index.html"); return; }
+
+      window.currentUser = { id: data.session.user.id, username: profile.username };
+      initSiteChrome(profile);
+      if (window.initHiddenMenus) await window.initHiddenMenus();
+
+      loadAllSuggestions();
+    })();
+  </script>
+</body>
+</html>
