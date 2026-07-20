@@ -53,8 +53,20 @@
       alert("초기화되었습니다.");
     }
 
+    async function toggleDm(userId, username, currentlyUnlocked) {
+      if (currentlyUnlocked) {
+        const { error } = await sb.from("unlocked_menus").delete().eq("user_id", userId).eq("menu_key", "dm");
+        if (error) { alert("실패: " + error.message); return; }
+      } else {
+        const { error } = await sb.from("unlocked_menus").insert({ user_id: userId, username, menu_key: "dm" });
+        if (error) { alert("실패: " + error.message); return; }
+      }
+      renderUsers();
+    }
+
     window.toggleHidden = toggleHidden;
     window.resetAvatar = resetAvatar;
+    window.toggleDm = toggleDm;
 
     async function renderUsers() {
       const listEl = document.getElementById("userList");
@@ -75,18 +87,23 @@
         (unlockMap[u.user_id] = unlockMap[u.user_id] || []).push(u.menu_key);
       });
 
-      listEl.innerHTML = profiles.map(p => `
+      listEl.innerHTML = profiles.map(p => {
+        const unlocks = unlockMap[p.id] || [];
+        const dmOn = unlocks.includes("dm");
+        return `
         <div class="user-row">
           <div class="user-row__main">
-            <span class="user-row__name">${p.username}${p.is_admin ? " 👑" : ""}${p.is_hidden ? " (숨김)" : ""}</span>
-            <span class="user-row__unlocks">해금: ${(unlockMap[p.id] || []).join(", ") || "-"}</span>
+            <a class="user-row__name" href="dm.html?admin_view=${encodeURIComponent(p.username)}" style="color:inherit;text-decoration:underline;">${p.username}${p.is_admin ? " 👑" : ""}${p.is_hidden ? " (숨김)" : ""}</a>
+            <span class="user-row__unlocks">해금: ${unlocks.join(", ") || "-"}</span>
           </div>
           <div class="user-row__actions">
             <button class="tt-upload-btn" onclick="toggleHidden('${p.id}', ${p.is_hidden})">${p.is_hidden ? "숨김 해제" : "숨기기"}</button>
             <button class="tt-upload-btn" onclick="resetAvatar('${p.id}')">사진 초기화</button>
+            <button class="tt-upload-btn" onclick="toggleDm('${p.id}', '${p.username}', ${dmOn})">${dmOn ? "DM 밴" : "DM 허용"}</button>
           </div>
         </div>
-      `).join("");
+      `;
+      }).join("");
     }
 
     (async () => {
