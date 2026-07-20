@@ -56,6 +56,12 @@
     const AVATAR_BUCKET = "avatars";
     const AVATAR_PATH = "current.img";
 
+    async function hasUnlocked(userId, key) {
+      const { data, error } = await sb.rpc("has_unlocked", { target_user: userId, target_key: key });
+      if (error) return false;
+      return !!data;
+    }
+
     const profileCard = document.getElementById("profileCard");
     const notFoundCard = document.getElementById("notFoundCard");
     const avatarImg = document.getElementById("avatarImg");
@@ -63,6 +69,9 @@
     const profileName = document.getElementById("profileName");
     const profileBadge = document.getElementById("profileBadge");
     const profileActions = document.getElementById("profileActions");
+    <div class="profile-actions" id="dmActions" style="display:none;">
+        <a class="tt-upload-btn" id="dmSendBtn" href="#" style="text-decoration:none; display:inline-block;">💬 DM 보내기</a>
+      </div>
     const avatarUploadBtn = document.getElementById("avatarUploadBtn");
     const avatarFileInput = document.getElementById("avatarFileInput");
 
@@ -143,6 +152,15 @@
           if (file) uploadAvatar(targetProfile.id, file);
           avatarFileInput.value = "";
         });
+      } else {
+        const [iOk, theyOk] = await Promise.all([
+          hasUnlocked(myProfile.id, "dm"),
+          hasUnlocked(targetProfile.id, "dm"),
+        ]);
+        if (iOk && theyOk) {
+          document.getElementById("dmActions").style.display = "block";
+          document.getElementById("dmSendBtn").href = "dm.html?with=" + encodeURIComponent(targetProfile.username);
+        }
       }
     })();
   </script>
