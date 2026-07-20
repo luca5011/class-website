@@ -33,6 +33,8 @@
 
     <h2 class="hub__title" style="font-size:16px; margin-top:26px;">건의함</h2>
     <div id="adminSuggestions">불러오는 중...</div>
+    <h2 class="hub__title" style="font-size:16px; margin-top:26px;">DM 기록 조회</h2>
+    <div id="dmUserList">불러오는 중...</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -84,9 +86,22 @@
       }).eq("id", id);
       if (error) { alert("실패: " + error.message); return; }
       loadAllSuggestions();
+      loadDmUserList();
     }
     window.submitReply = submitReply;
 
+    async function loadDmUserList() {
+      const el = document.getElementById("dmUserList");
+      const { data, error } = await sb.from("profiles").select("username").order("username");
+      if (error) {
+        el.innerHTML = `<p class="tt-empty">불러오지 못했습니다.</p>`;
+        return;
+      }
+      el.innerHTML = `<div class="user-row" style="flex-wrap:wrap; gap:8px;">` +
+        data.map(p => `<a class="tt-upload-btn" style="text-decoration:none;" href="dm.html?admin_view=${encodeURIComponent(p.username)}">${escapeHtml(p.username)}</a>`).join("") +
+        `</div>`;
+    }
+    
     document.getElementById("logoutBtn").addEventListener("click", async (e) => {
       e.preventDefault();
       await sb.auth.signOut();
