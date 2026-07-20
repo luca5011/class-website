@@ -217,6 +217,10 @@
       const adminViewUser = params.get("admin_view");
       const container = document.getElementById("dmContent");
 
+      if (!adminViewUser) {
+        sb.from("profiles").update({ dm_seen_at: new Date().toISOString() }).eq("id", myProfile.id);
+      }
+      
       if (adminViewUser && myProfile.is_admin) {
         const target = await getProfileByUsername(adminViewUser);
         if (!target) { container.innerHTML = `<p class="tt-empty">유저를 찾을 수 없습니다.</p>`; return; }
