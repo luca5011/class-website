@@ -499,6 +499,15 @@
     window.addEventListener("pointerup", releaseCharge);
     window.addEventListener("pointercancel", releaseCharge);
 
+    window.addEventListener("keydown", (e) => {
+      if (e.repeat) return;
+      if (e.key === "ArrowLeft") startCharge(-1);
+      if (e.key === "ArrowRight") startCharge(1);
+    });
+    window.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") releaseCharge();
+    });
+
     document.getElementById("clearNextBtn").addEventListener("click", () => {
       document.getElementById("clearOverlay").classList.remove("show");
       loadLevel(levelIndex + 1);
