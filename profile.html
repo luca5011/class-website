@@ -39,6 +39,9 @@
         <button class="tt-upload-btn" id="avatarUploadBtn">프로필 사진 변경</button>
         <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
       </div>
+      <div class="profile-actions" id="dmActions" style="display:none;">
+        <a class="tt-upload-btn" id="dmSendBtn" href="#" style="text-decoration:none; display:inline-block;">💬 DM 보내기</a>
+      </div>
     </div>
 
     <div class="tt-card" id="notFoundCard" style="display:none;">
@@ -69,9 +72,6 @@
     const profileName = document.getElementById("profileName");
     const profileBadge = document.getElementById("profileBadge");
     const profileActions = document.getElementById("profileActions");
-    <div class="profile-actions" id="dmActions" style="display:none;">
-        <a class="tt-upload-btn" id="dmSendBtn" href="#" style="text-decoration:none; display:inline-block;">💬 DM 보내기</a>
-      </div>
     const avatarUploadBtn = document.getElementById("avatarUploadBtn");
     const avatarFileInput = document.getElementById("avatarFileInput");
 
