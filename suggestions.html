@@ -121,10 +121,15 @@
         return;
       }
       if (profile.must_change_password) { location.replace("change-password.html"); return; }
+      
       window.currentUser = { id: data.session.user.id, username: profile.username };
       initSiteChrome(profile);
       if (window.initHiddenMenus) await window.initHiddenMenus();
+      if (window.initHiddenMenus) await window.initHiddenMenus();
 
+      sb.from("profiles").update({ suggestions_seen_at: new Date().toISOString() }).eq("id", profile.id);
+
+      loadMySuggestions();
       loadMySuggestions();
     })();
   </script>
