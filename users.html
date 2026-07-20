@@ -93,7 +93,7 @@
         return `
         <div class="user-row">
           <div class="user-row__main">
-            <a class="user-row__name" href="dm.html?admin_view=${encodeURIComponent(p.username)}" style="color:inherit;text-decoration:underline;">${p.username}${p.is_admin ? " 👑" : ""}${p.is_hidden ? " (숨김)" : ""}</a>
+            <a class="user-row__name" href="profile.html?user=${encodeURIComponent(p.username)}" style="color:inherit;text-decoration:underline;">${p.username}${p.is_admin ? " 👑" : ""}${p.is_hidden ? " (숨김)" : ""}</a>
             <span class="user-row__unlocks">해금: ${unlocks.join(", ") || "-"}</span>
           </div>
           <div class="user-row__actions">
