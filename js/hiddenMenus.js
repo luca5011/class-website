@@ -3,6 +3,7 @@
 const HIDDEN_MENUS = [
   { key: "jumpking", label: "🎮 미니게임", href: "minigames.html", code: "이산화망가니즈", keys: ["q", "w"] },
   { key: "freeboard", label: "자유게시판", href: "freeboard.html", code: "I'm_bored", keys: ["x", "y", "u"] },
+  { key: "dm", label: "DM", href: "dm.html", code: "promise", keys: ["q", "z", "w", "x"] },
 ];
 
 (function () {
