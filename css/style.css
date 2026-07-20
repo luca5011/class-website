@@ -415,6 +415,16 @@ body {
 }
 .navbar__profile:hover { opacity: .85; }
 
+.navbar__notify-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e0483a;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
 .profile-head {
   display: flex;
   align-items: center;
