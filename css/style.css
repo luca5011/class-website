@@ -653,24 +653,83 @@ body {
   font-size: 14px;
   box-sizing: border-box;
 }
-.bg-card__meta {
+/* ── 보드게임 대여 ─────────────────────────────── */
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.bg-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 18px 10px 14px;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  background: #eef1ea;
+  transition: transform .1s ease, border-color .1s ease;
+}
+.bg-tile:active { transform: scale(.97); }
+.bg-tile--easy { background: #dff0da; }
+.bg-tile--mid { background: #fbecd2; }
+.bg-tile--hard { background: #f9dcd6; }
+.bg-tile--selected { border-color: var(--board); }
+
+.bg-tile__icon { font-size: 30px; line-height: 1; }
+.bg-tile__name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.bg-tile__meta { font-size: 10px; color: #6b7364; }
+
+.bg-tile__del {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 12px;
+  color: #b3432b;
+  opacity: .55;
+}
+.bg-tile__del:hover { opacity: 1; }
+
+.bg-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.bg-slot {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.bg-diff {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
+  gap: 4px;
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
   border-radius: 20px;
+  cursor: pointer;
 }
-.bg-diff--easy { background: #e6efe4; color: var(--board); }
-.bg-diff--mid { background: #fdf1de; color: #b5762a; }
-.bg-diff--hard { background: #fbe4e0; color: #b3432b; }
 
-.bg-time {
-  font-size: 11px;
-  color: #8a9282;
+.bg-slot--taken {
+  opacity: .5;
+  cursor: not-allowed;
+  text-decoration: line-through;
 }
+
+.bg-my-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.bg-my-row--past { opacity: .5; }
