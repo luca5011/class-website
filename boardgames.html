@@ -23,11 +23,27 @@
 
   <div class="hub">
     <h1 class="hub__title">보드게임 대여</h1>
-    <div class="tt-card">
-      <div class="tt-card__body">
-        <p class="tt-empty">이 페이지는 다음 단계에서 제작 예정입니다.</p>
+
+    <div class="tt-card" id="addGameCard" style="display:none;">
+      <div class="tt-card__head"><h2>게임 추가 (관리자)</h2></div>
+      <div class="tt-card__body" style="display:block;">
+        <form id="addGameForm" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="newGameName" placeholder="게임 이름" style="flex:1; min-width:120px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-family:inherit; font-size:14px; box-sizing:border-box;">
+          <select id="newGameDifficulty" style="padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-family:inherit; font-size:14px;">
+            <option value="쉬움">쉬움</option>
+            <option value="중간">중간</option>
+            <option value="어려움">어려움</option>
+          </select>
+          <input type="text" id="newGameTime" placeholder="예: 약 30분" style="width:120px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-family:inherit; font-size:14px; box-sizing:border-box;">
+          <button class="btn" type="submit" style="width:auto; padding:10px 16px;">추가</button>
+        </form>
       </div>
     </div>
+
+    <div id="gameList">불러오는 중...</div>
+
+    <h2 class="hub__title" style="font-size:16px; margin-top:24px;">내 예약</h2>
+    <div id="myReservations">불러오는 중...</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -35,11 +51,217 @@
   <script src="js/site.js"></script>
   <script src="js/hiddenMenus.js"></script>
   <script>
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function todayStr() {
+      const d = new Date();
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
+    function getSlotsForDate(dateStr) {
+      if (!dateStr) return [];
+      const d = new Date(dateStr + "T00:00:00");
+      const day = d.getDay(); // 0=일 1=월 2=화 3=수 4=목 5=금 6=토
+      const base = ["조례시간", "1교시쉬는시간", "2교시쉬는시간", "3교시쉬는시간", "4교시쉬는시간", "점심시간", "5교시쉬는시간"];
+      if (day === 2 || day === 4) base.push("6교시쉬는시간");
+      return base;
+    }
+
+    function diffClass(d) {
+      if (d === "쉬움") return "easy";
+      if (d === "어려움") return "hard";
+      return "mid";
+    }
+
+    let GAMES = [];
+    let openPanelId = null;
+
+    async function loadGames() {
+      const el = document.getElementById("gameList");
+      const { data, error } = await sb.from("boardgames").select("*").order("name");
+      if (error) {
+        el.innerHTML = `<p class="tt-empty">불러오지 못했습니다.</p>`;
+        return;
+      }
+      GAMES = data || [];
+      renderGames();
+    }
+
+    function renderGames() {
+      const el = document.getElementById("gameList");
+      if (!GAMES.length) {
+        el.innerHTML = `<p class="tt-empty">등록된 보드게임이 없습니다.</p>`;
+        return;
+      }
+      el.innerHTML = GAMES.map(g => `
+        <div class="bg-card">
+          <div class="bg-card__top">
+            <div>
+              <span class="bg-card__name">${escapeHtml(g.name)}</span>
+              <div class="bg-card__meta">
+                ${g.difficulty ? `<span class="bg-diff bg-diff--${diffClass(g.difficulty)}">${escapeHtml(g.difficulty)}</span>` : ""}
+                ${g.play_time ? `<span class="bg-time">${escapeHtml(g.play_time)}</span>` : ""}
+              </div>
+            </div>
+            <div>
+              <button class="tt-upload-btn" onclick="toggleReserve(${g.id})">예약하기</button>
+              ${window.isAdminUser ? `<button class="tt-upload-btn" onclick="deleteGame(${g.id})">삭제</button>` : ""}
+            </div>
+          </div>
+          <div class="bg-reserve-panel" id="panel-${g.id}" style="display:none;">
+            <input type="date" id="date-${g.id}" min="${todayStr()}" onchange="renderSlots(${g.id})">
+            <div class="bg-slots" id="slots-${g.id}"></div>
+            <button class="btn" style="width:auto; padding:10px 18px;" onclick="submitReservation(${g.id})">대여하기</button>
+            <p class="msg" id="msg-${g.id}"></p>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function toggleReserve(gameId) {
+      if (openPanelId !== null && openPanelId !== gameId) {
+        const prev = document.getElementById(`panel-${openPanelId}`);
+        if (prev) prev.style.display = "none";
+      }
+      const panel = document.getElementById(`panel-${gameId}`);
+      const willOpen = panel.style.display === "none";
+      panel.style.display = willOpen ? "block" : "none";
+      openPanelId = willOpen ? gameId : null;
+      if (willOpen) {
+        document.getElementById(`date-${gameId}`).value = todayStr();
+        renderSlots(gameId);
+      }
+    }
+
+    async function renderSlots(gameId) {
+      const dateInput = document.getElementById(`date-${gameId}`);
+      const date = dateInput.value;
+      const slotsEl = document.getElementById(`slots-${gameId}`);
+      if (!date) { slotsEl.innerHTML = ""; return; }
+
+      const slots = getSlotsForDate(date);
+      const { data: taken } = await sb
+        .from("boardgame_reservations")
+        .select("time_slot")
+        .eq("game_id", gameId)
+        .eq("reserve_date", date);
+      const takenSet = new Set((taken || []).map(t => t.time_slot));
+
+      slotsEl.innerHTML = slots.map(s => `
+        <label class="bg-slot ${takenSet.has(s) ? "bg-slot--taken" : ""}">
+          <input type="checkbox" value="${s}" ${takenSet.has(s) ? "disabled" : ""}>
+          ${s}${takenSet.has(s) ? " (예약됨)" : ""}
+        </label>
+      `).join("");
+    }
+
+    async function submitReservation(gameId) {
+      const dateInput = document.getElementById(`date-${gameId}`);
+      const date = dateInput.value;
+      const msg = document.getElementById(`msg-${gameId}`);
+      msg.textContent = "";
+      msg.className = "msg";
+
+      if (!date) { msg.textContent = "날짜를 선택해주세요."; msg.classList.add("msg--error"); return; }
+
+      const checked = Array.from(document.querySelectorAll(`#slots-${gameId} input[type=checkbox]:checked`)).map(c => c.value);
+      if (!checked.length) { msg.textContent = "시간대를 하나 이상 선택해주세요."; msg.classList.add("msg--error"); return; }
+
+      const game = GAMES.find(g => g.id === gameId);
+      const rows = checked.map(slot => ({
+        game_id: gameId,
+        game_name: game.name,
+        reserve_date: date,
+        time_slot: slot,
+        user_id: window.currentUser.id,
+        username: window.currentUser.username,
+      }));
+
+      const { error } = await sb.from("boardgame_reservations").insert(rows);
+      if (error) {
+        msg.textContent = "예약에 실패했습니다 (다른 사람이 먼저 예약했을 수 있어요): " + error.message;
+        msg.classList.add("msg--error");
+        await renderSlots(gameId);
+        return;
+      }
+
+      msg.textContent = "예약되었습니다!";
+      msg.classList.add("msg--info");
+      await renderSlots(gameId);
+      loadMyReservations();
+    }
+
+    async function deleteGame(gameId) {
+      if (!confirm("이 게임을 삭제할까요? 관련 예약도 모두 삭제됩니다.")) return;
+      const { error } = await sb.from("boardgames").delete().eq("id", gameId);
+      if (error) { alert("실패: " + error.message); return; }
+      loadGames();
+    }
+
+    async function loadMyReservations() {
+      const el = document.getElementById("myReservations");
+      const { data, error } = await sb
+        .from("boardgame_reservations")
+        .select("*")
+        .eq("user_id", window.currentUser.id)
+        .order("reserve_date", { ascending: true });
+
+      if (error) { el.innerHTML = `<p class="tt-empty">불러오지 못했습니다.</p>`; return; }
+      if (!data.length) { el.innerHTML = `<p class="tt-empty">예약한 게임이 없습니다.</p>`; return; }
+
+      const today = todayStr();
+      el.innerHTML = data.map(r => {
+        const isPast = r.reserve_date < today;
+        return `
+        <div class="bg-my-row ${isPast ? "bg-my-row--past" : ""}">
+          <span>${escapeHtml(r.game_name)} · ${r.reserve_date} · ${escapeHtml(r.time_slot)}${isPast ? " (지난 예약)" : ""}</span>
+          ${isPast ? "" : `<button class="tt-upload-btn" onclick="cancelReservation(${r.id})">취소</button>`}
+        </div>
+      `;
+      }).join("");
+    }
+
+    async function cancelReservation(id) {
+      const { error } = await sb.from("boardgame_reservations").delete().eq("id", id);
+      if (error) { alert("실패: " + error.message); return; }
+      loadMyReservations();
+      if (openPanelId !== null) renderSlots(openPanelId);
+    }
+
+    window.toggleReserve = toggleReserve;
+    window.renderSlots = renderSlots;
+    window.submitReservation = submitReservation;
+    window.deleteGame = deleteGame;
+    window.cancelReservation = cancelReservation;
+
+    document.getElementById("addGameForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById("newGameName");
+      const diffInput = document.getElementById("newGameDifficulty");
+      const timeInput = document.getElementById("newGameTime");
+      const name = nameInput.value.trim();
+      if (!name) return;
+      const { error } = await sb.from("boardgames").insert({
+        name,
+        difficulty: diffInput.value,
+        play_time: timeInput.value.trim() || null,
+      });
+      if (error) { alert("추가 실패: " + error.message); return; }
+      nameInput.value = "";
+      timeInput.value = "";
+      loadGames();
+    });
+
     document.getElementById("logoutBtn").addEventListener("click", async (e) => {
       e.preventDefault();
       await sb.auth.signOut();
       location.href = "login.html";
     });
+
     (async () => {
       if (typeof sb === "undefined") { location.replace("login.html"); return; }
       const { data } = await sb.auth.getSession();
@@ -52,9 +274,16 @@
         return;
       }
       if (profile.must_change_password) { location.replace("change-password.html"); return; }
+
       window.currentUser = { id: data.session.user.id, username: profile.username };
+      window.isAdminUser = profile.is_admin;
       initSiteChrome(profile);
       if (window.initHiddenMenus) await window.initHiddenMenus();
+
+      if (profile.is_admin) document.getElementById("addGameCard").style.display = "block";
+
+      await loadGames();
+      await loadMyReservations();
     })();
   </script>
 </body>
