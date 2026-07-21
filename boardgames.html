@@ -24,7 +24,7 @@
   <div class="hub">
     <h1 class="hub__title">보드게임 대여</h1>
 
-    <div class="tt-card" id="addGameCard" style="display:none;">
+    <div class="tt-card" id="addGameCard" style="display:none; margin-bottom:16px;">
       <div class="tt-card__head"><h2>게임 추가 (관리자)</h2></div>
       <div class="tt-card__body" style="display:block;">
         <form id="addGameForm" style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -41,6 +41,16 @@
     </div>
 
     <div id="gameList">불러오는 중...</div>
+
+    <div class="tt-card" id="reservePanel" style="display:none; margin-top:16px;">
+      <div class="tt-card__head"><h2 id="reserveTitle"></h2></div>
+      <div class="tt-card__body" style="display:block;">
+        <input type="date" id="reserveDate" onchange="renderSlots()">
+        <div class="bg-slots" id="reserveSlots"></div>
+        <button class="btn" style="width:auto; padding:10px 18px;" onclick="submitReservation()">대여하기</button>
+        <p class="msg" id="reserveMsg"></p>
+      </div>
+    </div>
 
     <h2 class="hub__title" style="font-size:16px; margin-top:24px;">내 예약</h2>
     <div id="myReservations">불러오는 중...</div>
@@ -77,8 +87,19 @@
       return "mid";
     }
 
+    const GAME_ICONS = {
+      "쿼리도": "🧱",
+      "스플렌더": "💎",
+      "보난자": "🫘",
+      "할리갈리": "🔔",
+      "슬리핑퀸즈": "👑",
+    };
+    function gameIcon(name) {
+      return GAME_ICONS[name] || "🎲";
+    }
+
     let GAMES = [];
-    let openPanelId = null;
+    let selectedGameId = null;
 
     async function loadGames() {
       const el = document.getElementById("gameList");
@@ -97,57 +118,41 @@
         el.innerHTML = `<p class="tt-empty">등록된 보드게임이 없습니다.</p>`;
         return;
       }
-      el.innerHTML = GAMES.map(g => `
-        <div class="bg-card">
-          <div class="bg-card__top">
-            <div>
-              <span class="bg-card__name">${escapeHtml(g.name)}</span>
-              <div class="bg-card__meta">
-                ${g.difficulty ? `<span class="bg-diff bg-diff--${diffClass(g.difficulty)}">${escapeHtml(g.difficulty)}</span>` : ""}
-                ${g.play_time ? `<span class="bg-time">${escapeHtml(g.play_time)}</span>` : ""}
-              </div>
-            </div>
-            <div>
-              <button class="tt-upload-btn" onclick="toggleReserve(${g.id})">예약하기</button>
-              ${window.isAdminUser ? `<button class="tt-upload-btn" onclick="deleteGame(${g.id})">삭제</button>` : ""}
-            </div>
-          </div>
-          <div class="bg-reserve-panel" id="panel-${g.id}" style="display:none;">
-            <input type="date" id="date-${g.id}" min="${todayStr()}" onchange="renderSlots(${g.id})">
-            <div class="bg-slots" id="slots-${g.id}"></div>
-            <button class="btn" style="width:auto; padding:10px 18px;" onclick="submitReservation(${g.id})">대여하기</button>
-            <p class="msg" id="msg-${g.id}"></p>
-          </div>
-        </div>
-      `).join("");
+      el.innerHTML = `<div class="bg-grid">` + GAMES.map(g => `
+        <button type="button" class="bg-tile bg-tile--${diffClass(g.difficulty)} ${selectedGameId === g.id ? "bg-tile--selected" : ""}" onclick="selectGame(${g.id})">
+          ${window.isAdminUser ? `<span class="bg-tile__del" onclick="event.stopPropagation(); deleteGame(${g.id})">✕</span>` : ""}
+          <span class="bg-tile__icon">${gameIcon(g.name)}</span>
+          <span class="bg-tile__name">${escapeHtml(g.name)}</span>
+          <span class="bg-tile__meta">${escapeHtml(g.difficulty || "")}${g.play_time ? " · " + escapeHtml(g.play_time) : ""}</span>
+        </button>
+      `).join("") + `</div>`;
     }
 
-    function toggleReserve(gameId) {
-      if (openPanelId !== null && openPanelId !== gameId) {
-        const prev = document.getElementById(`panel-${openPanelId}`);
-        if (prev) prev.style.display = "none";
-      }
-      const panel = document.getElementById(`panel-${gameId}`);
-      const willOpen = panel.style.display === "none";
-      panel.style.display = willOpen ? "block" : "none";
-      openPanelId = willOpen ? gameId : null;
-      if (willOpen) {
-        document.getElementById(`date-${gameId}`).value = todayStr();
-        renderSlots(gameId);
-      }
+    function selectGame(gameId) {
+      selectedGameId = gameId;
+      renderGames();
+      const game = GAMES.find(g => g.id === gameId);
+      document.getElementById("reserveTitle").textContent = game.name + " 예약";
+      document.getElementById("reservePanel").style.display = "block";
+      const dateInput = document.getElementById("reserveDate");
+      dateInput.min = todayStr();
+      dateInput.value = todayStr();
+      document.getElementById("reserveMsg").textContent = "";
+      renderSlots();
+      document.getElementById("reservePanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
-    async function renderSlots(gameId) {
-      const dateInput = document.getElementById(`date-${gameId}`);
-      const date = dateInput.value;
-      const slotsEl = document.getElementById(`slots-${gameId}`);
+    async function renderSlots() {
+      if (!selectedGameId) return;
+      const date = document.getElementById("reserveDate").value;
+      const slotsEl = document.getElementById("reserveSlots");
       if (!date) { slotsEl.innerHTML = ""; return; }
 
       const slots = getSlotsForDate(date);
       const { data: taken } = await sb
         .from("boardgame_reservations")
         .select("time_slot")
-        .eq("game_id", gameId)
+        .eq("game_id", selectedGameId)
         .eq("reserve_date", date);
       const takenSet = new Set((taken || []).map(t => t.time_slot));
 
@@ -159,21 +164,20 @@
       `).join("");
     }
 
-    async function submitReservation(gameId) {
-      const dateInput = document.getElementById(`date-${gameId}`);
-      const date = dateInput.value;
-      const msg = document.getElementById(`msg-${gameId}`);
+    async function submitReservation() {
+      const date = document.getElementById("reserveDate").value;
+      const msg = document.getElementById("reserveMsg");
       msg.textContent = "";
       msg.className = "msg";
 
       if (!date) { msg.textContent = "날짜를 선택해주세요."; msg.classList.add("msg--error"); return; }
 
-      const checked = Array.from(document.querySelectorAll(`#slots-${gameId} input[type=checkbox]:checked`)).map(c => c.value);
+      const checked = Array.from(document.querySelectorAll("#reserveSlots input[type=checkbox]:checked")).map(c => c.value);
       if (!checked.length) { msg.textContent = "시간대를 하나 이상 선택해주세요."; msg.classList.add("msg--error"); return; }
 
-      const game = GAMES.find(g => g.id === gameId);
+      const game = GAMES.find(g => g.id === selectedGameId);
       const rows = checked.map(slot => ({
-        game_id: gameId,
+        game_id: selectedGameId,
         game_name: game.name,
         reserve_date: date,
         time_slot: slot,
@@ -185,13 +189,13 @@
       if (error) {
         msg.textContent = "예약에 실패했습니다 (다른 사람이 먼저 예약했을 수 있어요): " + error.message;
         msg.classList.add("msg--error");
-        await renderSlots(gameId);
+        await renderSlots();
         return;
       }
 
       msg.textContent = "예약되었습니다!";
       msg.classList.add("msg--info");
-      await renderSlots(gameId);
+      await renderSlots();
       loadMyReservations();
     }
 
@@ -199,6 +203,10 @@
       if (!confirm("이 게임을 삭제할까요? 관련 예약도 모두 삭제됩니다.")) return;
       const { error } = await sb.from("boardgames").delete().eq("id", gameId);
       if (error) { alert("실패: " + error.message); return; }
+      if (selectedGameId === gameId) {
+        selectedGameId = null;
+        document.getElementById("reservePanel").style.display = "none";
+      }
       loadGames();
     }
 
@@ -229,10 +237,10 @@
       const { error } = await sb.from("boardgame_reservations").delete().eq("id", id);
       if (error) { alert("실패: " + error.message); return; }
       loadMyReservations();
-      if (openPanelId !== null) renderSlots(openPanelId);
+      if (selectedGameId !== null) renderSlots();
     }
 
-    window.toggleReserve = toggleReserve;
+    window.selectGame = selectGame;
     window.renderSlots = renderSlots;
     window.submitReservation = submitReservation;
     window.deleteGame = deleteGame;
